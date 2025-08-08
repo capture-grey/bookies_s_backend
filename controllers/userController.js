@@ -6,9 +6,14 @@ const dotenv = require("dotenv");
 
 const User = require("../models/user");
 const Book = require("../models/book");
+const Forum = require("../models/forum");
 
 const getOwnInfo = async (req, res, next) => {
-  const session = await mongoose.startSession();
+  console.log(req.user);
+
+  return res.status(200).json({
+    user: req.user,
+  });
 };
 const getUserInfo = async (req, res, next) => {
   const session = await mongoose.startSession();
