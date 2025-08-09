@@ -75,48 +75,136 @@ const getOwnInfo = async (req, res, next) => {
     });
   }
 };
-
 const editOwnInfo = async (req, res, next) => {
   const session = await mongoose.startSession();
-
   try {
+    await session.startTransaction();
     const userId = req.user._id;
-    const { name } = req.body;
+    const { name, email, currentPassword, newPassword } = req.body;
 
-    if (!name || typeof name !== "string" || !name.trim()) {
+    console.log(userId, name, email, currentPassword, newPassword);
+
+    if (!name && !email && !newPassword) {
+      await session.abortTransaction();
       return res.status(400).json({
         success: false,
-        message: "Name is required and must be a non-empty string",
+        message:
+          "At least one field (name, email, or password) must be provided",
       });
     }
 
-    await session.startTransaction();
-
-    const user = await User.findById(userId).session(session);
+    // get user
+    const user = await User.findById(userId)
+      .select("+password")
+      .session(session);
     if (!user) {
       await session.abortTransaction();
-      session.endSession();
       return res.status(404).json({
         success: false,
         message: "User not found",
       });
     }
 
-    user.name = name.trim();
-    await user.save({ session });
+    // update name
+    if (name) {
+      if (typeof name !== "string" || !name.trim()) {
+        await session.abortTransaction();
+        return res.status(400).json({
+          success: false,
+          message: "Name must be a non-empty string",
+        });
+      }
+      user.name = name.trim();
+    }
 
+    // update email
+    if (email) {
+      if (typeof email !== "string" || !email.trim()) {
+        await session.abortTransaction();
+        return res.status(400).json({
+          success: false,
+          message: "Email must be a non-empty string",
+        });
+      }
+
+      //  if email already exists
+      const emailExists = await User.findOne({
+        email: email.trim(),
+        _id: { $ne: userId },
+      }).session(session);
+
+      if (emailExists) {
+        await session.abortTransaction();
+        return res.status(400).json({
+          success: false,
+          message: "Email already in use",
+        });
+      }
+
+      user.email = email.trim().toLowerCase();
+    }
+
+    // update password
+    if (newPassword) {
+      if (!currentPassword) {
+        await session.abortTransaction();
+        return res.status(400).json({
+          success: false,
+          message: "Current password is required to set a new password",
+        });
+      }
+
+      // verify current password
+      const isMatch = await user.comparePassword(currentPassword);
+      if (!isMatch) {
+        await session.abortTransaction();
+        return res.status(401).json({
+          success: false,
+          message: "Current password is incorrect",
+        });
+      }
+
+      // validate new password
+      if (newPassword.length < 6) {
+        await session.abortTransaction();
+        return res.status(400).json({
+          success: false,
+          message: "Password must be at least 6 characters long",
+        });
+      }
+
+      user.password = newPassword;
+    }
+
+    // save changes
+    await user.save({ session });
     await session.commitTransaction();
-    session.endSession();
+
+    const responseData = {
+      name: user.name,
+      email: user.email,
+    };
 
     return res.status(200).json({
       success: true,
-      message: "Name updated successfully",
-      data: { name: user.name },
+      message: "Profile updated successfully",
+      data: responseData,
     });
   } catch (error) {
     if (session.inTransaction()) await session.abortTransaction();
-    session.endSession();
+
+    if (error.name === "ValidationError") {
+      return res.status(400).json({
+        success: false,
+        message: "Validation failed",
+        errors: error.errors,
+      });
+    }
+
+    console.error("Edit profile error:", error);
     next(error);
+  } finally {
+    await session.endSession();
   }
 };
 const deleteAccount = async (req, res, next) => {
@@ -125,8 +213,9 @@ const deleteAccount = async (req, res, next) => {
     await session.startTransaction();
     const userId = req.user._id;
 
+    // get user with forum reference
     const user = await User.findById(userId)
-      .select("joinedForums ownedBooks")
+      .select("joinedForums")
       .session(session);
 
     if (!user) {
@@ -137,13 +226,14 @@ const deleteAccount = async (req, res, next) => {
       });
     }
 
+    // admin transfer
     const adminForums = await Forum.find({
       "members.userId": userId,
       "members.role": "admin",
     }).session(session);
 
     for (const forum of adminForums) {
-      if (forum.members.length === 1) {
+      if (forum.members.length > 1) {
         const otherMembers = await Forum.aggregate([
           { $match: { _id: forum._id } },
           { $unwind: "$members" },
@@ -165,8 +255,6 @@ const deleteAccount = async (req, res, next) => {
             { $set: { "joinedForums.$.role": "admin" } },
             { session }
           );
-        } else {
-          await Forum.deleteOne({ _id: forum._id }).session(session);
         }
       }
     }
@@ -178,22 +266,12 @@ const deleteAccount = async (req, res, next) => {
       { session }
     );
 
-    // rmove  books from  hiddenBooks
-    await Forum.updateMany(
-      { hiddenBooks: { $in: user.ownedBooks } },
-      { $pullAll: { hiddenBooks: user.ownedBooks } },
-      { session }
-    );
-
-    // delete all user's books
-    await Book.deleteMany({ _id: { $in: user.ownedBooks } }).session(session);
-
-    //  delete the user
+    // delete user
     await User.deleteOne({ _id: userId }).session(session);
 
     await session.commitTransaction();
 
-    //clear cookie, token
+    // clearn token
     res.clearCookie("token");
 
     return res.status(200).json({
@@ -201,7 +279,6 @@ const deleteAccount = async (req, res, next) => {
       message: "Account deleted successfully",
       data: {
         forumsUpdated: adminForums.length,
-        forumsDeleted: adminForums.filter((f) => f.members.length === 1).length,
       },
     });
   } catch (error) {

@@ -235,39 +235,42 @@ const editDetails = async (req, res, next) => {
       description,
       messengerLink,
       inviteCode,
-      featuredBook,
+      featured, // { book, quote }
     } = req.body;
 
-    const forum = await Forum.findById(forumId).session(session);
+    // 1. Verify forum exists and user is admin
+    const forum = await Forum.findOne({
+      _id: forumId,
+      "members.userId": userId,
+      "members.role": "admin",
+    }).session(session);
+
     if (!forum) {
-      await session.abortTransaction();
-      return res.status(404).json({
-        success: false,
-        message: "Forum not found",
-      });
-    }
-
-    const isAdmin = forum.members.some(
-      (member) => member.userId.equals(userId) && member.role === "admin"
-    );
-
-    if (!isAdmin) {
       await session.abortTransaction();
       return res.status(403).json({
         success: false,
-        message: "Only admins can edit forum details",
+        message: "Admin privileges required",
       });
     }
 
+    // 2. Prepare updates
     const updates = {
       name: name?.trim(),
       location: location?.trim(),
       description: description?.trim(),
       messengerLink: messengerLink?.trim(),
       inviteCode: inviteCode?.trim(),
-      featuredBook: featuredBook?.trim(),
     };
 
+    // 3. Handle featured content
+    if (featured) {
+      updates.featured = {
+        book: featured.book?.trim(),
+        quote: featured.quote?.trim(),
+      };
+    }
+
+    // 4. Apply updates
     const updatedForum = await Forum.findByIdAndUpdate(
       forumId,
       { $set: updates },
@@ -285,18 +288,118 @@ const editDetails = async (req, res, next) => {
         description: updatedForum.description,
         messengerLink: updatedForum.messengerLink,
         inviteCode: updatedForum.inviteCode,
-        featuredBook: updatedForum.featuredBook,
+        featured: updatedForum.featured || null,
       },
     });
   } catch (error) {
     await session.abortTransaction();
-    console.error("Edit forum details error:", error);
+    console.error("Edit forum error:", error);
 
     if (error.name === "ValidationError") {
       return res.status(400).json({
         success: false,
         message: "Validation failed",
         errors: error.errors,
+      });
+    }
+
+    next(error);
+  } finally {
+    await session.endSession();
+  }
+};
+//done
+const joinForum = async (req, res, next) => {
+  const session = await mongoose.startSession();
+  try {
+    await session.startTransaction();
+
+    const { inviteCode } = req.body;
+    const userId = req.user._id;
+    console.log(inviteCode);
+    console.log(userId);
+
+    // validation
+    if (!inviteCode?.trim()) {
+      await session.abortTransaction();
+      return res.status(400).json({
+        success: false,
+        message: "Invite code is required",
+      });
+    }
+
+    // find forum
+    const forum = await Forum.findOne({
+      inviteCode: inviteCode.trim(),
+    }).session(session);
+
+    if (!forum) {
+      await session.abortTransaction();
+      return res.status(404).json({
+        success: false,
+        message: "Invalid invite code",
+      });
+    }
+
+    // if user alrady member
+    const isAlreadyMember = forum.members.some((member) =>
+      member.userId.equals(userId)
+    );
+    if (isAlreadyMember) {
+      await session.abortTransaction();
+      return res.status(400).json({
+        success: false,
+        message: "You are already a member of this forum",
+      });
+    }
+
+    // add user to forum
+    await Forum.findByIdAndUpdate(
+      forum._id,
+      {
+        $addToSet: {
+          members: {
+            userId: userId,
+            role: "member",
+          },
+        },
+      },
+      { session }
+    );
+
+    // add forum to user forum list
+    await User.findByIdAndUpdate(
+      userId,
+      {
+        $addToSet: {
+          joinedForums: {
+            forumId: forum._id,
+            role: "member",
+          },
+        },
+      },
+      { session }
+    );
+
+    await session.commitTransaction();
+
+    return res.status(200).json({
+      success: true,
+      message: "Successfully joined the forum",
+      data: {
+        forumId: forum._id,
+        name: forum.name,
+        membersCount: forum.members.length + 1,
+      },
+    });
+  } catch (error) {
+    await session.abortTransaction();
+    console.error("Join forum error:", error);
+
+    if (error.name === "CastError") {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid user ID",
       });
     }
 
@@ -440,12 +543,22 @@ const getMemberDetails = async (req, res, next) => {
     const { forumId, memberId } = req.params;
     const requestingUserId = req.user._id;
 
-    const forum = await Forum.findOne({
-      _id: forumId,
-      "members.userId": requestingUserId,
-    }).session(session);
+    console.log(forumId, memberId, requestingUserId);
+
+    const forum = await Forum.findById(forumId).session(session);
 
     if (!forum) {
+      await session.abortTransaction();
+      return res.status(404).json({
+        success: false,
+        message: "Forum not found",
+      });
+    }
+
+    const isMember = forum.members.some(
+      (m) => m.userId.toString() === requestingUserId.toString()
+    );
+    if (!isMember) {
       await session.abortTransaction();
       return res.status(403).json({
         success: false,
@@ -453,22 +566,11 @@ const getMemberDetails = async (req, res, next) => {
       });
     }
 
-    // get target member
-    const member = await User.findById(memberId)
-      .select("name email joinedForums")
-      .session(session);
+    const targetMember = forum.members.find(
+      (m) => m.userId.toString() === memberId
+    );
 
-    if (!member) {
-      await session.abortTransaction();
-      return res.status(404).json({
-        success: false,
-        message: "Member not found",
-      });
-    }
-
-    // if member in forum forum
-    const isInForum = forum.members.some((m) => m.userId.equals(memberId));
-    if (!isInForum) {
+    if (!targetMember) {
       await session.abortTransaction();
       return res.status(404).json({
         success: false,
@@ -476,8 +578,8 @@ const getMemberDetails = async (req, res, next) => {
       });
     }
 
-    // get member books
-    const userBooks = await User.findById(memberId)
+    const memberWithBooks = await User.findById(memberId)
+      .select("name email")
       .populate({
         path: "ownedBooks",
         match: { _id: { $nin: forum.hiddenBooks || [] } },
@@ -491,16 +593,25 @@ const getMemberDetails = async (req, res, next) => {
       success: true,
       data: {
         member: {
-          _id: member._id,
-          name: member.name,
-          email: member.email,
+          _id: memberId,
+          name: memberWithBooks.name,
+          email: memberWithBooks.email,
+          role: targetMember.role,
         },
-        books: userBooks.ownedBooks || [],
+        books: memberWithBooks.ownedBooks || [],
       },
     });
   } catch (error) {
     await session.abortTransaction();
     console.error("Get member details error:", error);
+
+    if (error.name === "CastError") {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid ID format",
+      });
+    }
+
     next(error);
   } finally {
     await session.endSession();
@@ -511,10 +622,10 @@ const makeAdmin = async (req, res, next) => {
   try {
     await session.startTransaction();
 
-    const { forumId, userId } = req.params;
+    const { forumId, memberId } = req.params;
     const currentAdminId = req.user._id;
 
-    // if current user is admin of this forum
+    //  if current user is admin
     const forum = await Forum.findOne({
       _id: forumId,
       "members.userId": currentAdminId,
@@ -529,8 +640,8 @@ const makeAdmin = async (req, res, next) => {
       });
     }
 
-    // user exists and is a forum member
-    const targetUser = await User.exists({ _id: userId }).session(session);
+    // if target exists
+    const targetUser = await User.findById(memberId).session(session);
     if (!targetUser) {
       await session.abortTransaction();
       return res.status(404).json({
@@ -539,7 +650,8 @@ const makeAdmin = async (req, res, next) => {
       });
     }
 
-    const isMember = forum.members.some((m) => m.userId.equals(userId));
+    // if target member
+    const isMember = forum.members.some((m) => m.userId.equals(memberId));
     if (!isMember) {
       await session.abortTransaction();
       return res.status(400).json({
@@ -548,28 +660,16 @@ const makeAdmin = async (req, res, next) => {
       });
     }
 
-    //  if  already admin
-    const alreadyAdmin = forum.members.some(
-      (m) => m.userId.equals(userId) && m.role === "admin"
-    );
-    if (alreadyAdmin) {
-      await session.abortTransaction();
-      return res.status(400).json({
-        success: false,
-        message: "User is already an admin",
-      });
-    }
-
-    // uuser role
+    // update role
     await Forum.updateOne(
-      { _id: forumId, "members.userId": userId },
+      { _id: forumId, "members.userId": memberId },
       { $set: { "members.$.role": "admin" } },
       { session }
     );
 
-    //  Update user's joinedForums role
+    // update role in user joined forums
     await User.updateOne(
-      { _id: userId, "joinedForums.forumId": forumId },
+      { _id: memberId, "joinedForums.forumId": forumId },
       { $set: { "joinedForums.$.role": "admin" } },
       { session }
     );
@@ -673,7 +773,7 @@ const hideBook = async (req, res, next) => {
     const { forumId, bookId } = req.params;
     const userId = req.user._id;
 
-    // privilege
+    // if admin
     const forum = await Forum.findOne({
       _id: forumId,
       "members.userId": userId,
@@ -684,7 +784,7 @@ const hideBook = async (req, res, next) => {
       await session.abortTransaction();
       return res.status(403).json({
         success: false,
-        message: "Forum not found or admin privileges required",
+        message: "Admin privileges required",
       });
     }
 
@@ -698,8 +798,8 @@ const hideBook = async (req, res, next) => {
       });
     }
 
-    // add to hidden books
-    if (forum.hiddenBooks.includes(bookId)) {
+    // if already hidden
+    if (forum.hiddenBooks.some((id) => id.equals(bookId))) {
       await session.abortTransaction();
       return res.status(400).json({
         success: false,
@@ -707,6 +807,7 @@ const hideBook = async (req, res, next) => {
       });
     }
 
+    // add to hidden
     await Forum.findByIdAndUpdate(
       forumId,
       { $addToSet: { hiddenBooks: bookId } },
@@ -715,13 +816,13 @@ const hideBook = async (req, res, next) => {
 
     await session.commitTransaction();
 
-    return res.status(200).json({
+    res.status(200).json({
       success: true,
       message: "Book hidden successfully",
     });
+    return;
   } catch (error) {
     await session.abortTransaction();
-    console.error("Hide book error:", error);
 
     if (error.name === "CastError") {
       return res.status(400).json({
@@ -730,6 +831,7 @@ const hideBook = async (req, res, next) => {
       });
     }
 
+    console.error("Hide book error:", error);
     next(error);
   } finally {
     await session.endSession();
@@ -801,6 +903,7 @@ module.exports = {
   createForum,
   getForumDetails,
   editDetails,
+  joinForum,
   leaveForum,
   deleteForum,
   getMemberDetails,

@@ -45,9 +45,15 @@ const ForumSchema = new mongoose.Schema(
       default: () => uuidv4(),
       unique: true,
     },
-    featuredBook: {
-      type: String,
-      trim: true,
+    featured: {
+      book: {
+        type: String,
+        trim: true,
+      },
+      quote: {
+        type: String,
+        trim: true,
+      },
     },
   },
   { timestamps: true }
