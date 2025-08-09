@@ -1,7 +1,7 @@
 const express = require("express");
 const {
   getOwnInfo,
-  getUserInfo,
+  deleteAccount,
   editOwnInfo,
 } = require("../controllers/userController.js");
 const { authenticate } = require("../middlewares/common/authMiddleware.js");
@@ -12,6 +12,6 @@ const router = express.Router();
 
 router.get("/me", authenticate, getOwnInfo);
 router.patch("/me", authenticate, editOwnInfo);
-router.get("/:userId", getUserInfo);
+router.delete("/me", authenticate, deleteAccount);
 
 module.exports = router;

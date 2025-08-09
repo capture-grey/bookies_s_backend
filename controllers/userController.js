@@ -76,59 +76,6 @@ const getOwnInfo = async (req, res, next) => {
   }
 };
 
-const getUserInfo = async (req, res, next) => {
-  const session = await mongoose.startSession();
-
-  try {
-    // check if user id valid
-    const userId = req.params.userId;
-    if (!mongoose.Types.ObjectId.isValid(userId)) {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid userId",
-      });
-    }
-
-    await session.startTransaction();
-
-    // get details
-    const user = await User.findById(userId)
-      .select("name email ownedBooks")
-      .populate({
-        path: "ownedBooks",
-        select: "title author genre",
-        options: { session },
-      })
-      .session(session);
-
-    if (!user) {
-      await session.abortTransaction();
-      session.endSession();
-      return res.status(404).json({
-        success: false,
-        message: "User not found",
-      });
-    }
-
-    await session.commitTransaction();
-    session.endSession();
-
-    return res.status(200).json({
-      success: true,
-      data: {
-        userId: user._id,
-        name: user.name,
-        email: user.email,
-        books: user.ownedBooks,
-      },
-    });
-  } catch (error) {
-    if (session.inTransaction()) await session.abortTransaction();
-    session.endSession();
-    next(error);
-  }
-};
-
 const editOwnInfo = async (req, res, next) => {
   const session = await mongoose.startSession();
 
@@ -172,9 +119,110 @@ const editOwnInfo = async (req, res, next) => {
     next(error);
   }
 };
+const deleteAccount = async (req, res, next) => {
+  const session = await mongoose.startSession();
+  try {
+    await session.startTransaction();
+    const userId = req.user._id;
+
+    const user = await User.findById(userId)
+      .select("joinedForums ownedBooks")
+      .session(session);
+
+    if (!user) {
+      await session.abortTransaction();
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+
+    const adminForums = await Forum.find({
+      "members.userId": userId,
+      "members.role": "admin",
+    }).session(session);
+
+    for (const forum of adminForums) {
+      if (forum.members.length === 1) {
+        const otherMembers = await Forum.aggregate([
+          { $match: { _id: forum._id } },
+          { $unwind: "$members" },
+          { $match: { "members.userId": { $ne: userId } } },
+          { $sample: { size: 1 } },
+        ]).session(session);
+
+        if (otherMembers.length > 0) {
+          const newAdminId = otherMembers[0].members.userId;
+
+          await Forum.updateOne(
+            { _id: forum._id, "members.userId": newAdminId },
+            { $set: { "members.$.role": "admin" } },
+            { session }
+          );
+
+          await User.updateOne(
+            { _id: newAdminId, "joinedForums.forumId": forum._id },
+            { $set: { "joinedForums.$.role": "admin" } },
+            { session }
+          );
+        } else {
+          await Forum.deleteOne({ _id: forum._id }).session(session);
+        }
+      }
+    }
+
+    // remove user from all forums
+    await Forum.updateMany(
+      { "members.userId": userId },
+      { $pull: { members: { userId } } },
+      { session }
+    );
+
+    // rmove  books from  hiddenBooks
+    await Forum.updateMany(
+      { hiddenBooks: { $in: user.ownedBooks } },
+      { $pullAll: { hiddenBooks: user.ownedBooks } },
+      { session }
+    );
+
+    // delete all user's books
+    await Book.deleteMany({ _id: { $in: user.ownedBooks } }).session(session);
+
+    //  delete the user
+    await User.deleteOne({ _id: userId }).session(session);
+
+    await session.commitTransaction();
+
+    //clear cookie, token
+    res.clearCookie("token");
+
+    return res.status(200).json({
+      success: true,
+      message: "Account deleted successfully",
+      data: {
+        forumsUpdated: adminForums.length,
+        forumsDeleted: adminForums.filter((f) => f.members.length === 1).length,
+      },
+    });
+  } catch (error) {
+    await session.abortTransaction();
+    console.error("Delete account error:", error);
+
+    if (error.name === "CastError") {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid user ID",
+      });
+    }
+
+    next(error);
+  } finally {
+    await session.endSession();
+  }
+};
 
 module.exports = {
   getOwnInfo,
-  getUserInfo,
+  deleteAccount,
   editOwnInfo,
 };

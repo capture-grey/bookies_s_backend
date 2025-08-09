@@ -42,18 +42,12 @@ const ForumSchema = new mongoose.Schema(
     ],
     inviteCode: {
       type: String,
-      default: () => uuidv4(), // Generates a one-time invite code
+      default: () => uuidv4(),
       unique: true,
     },
-    featured: {
-      bookId: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "Book",
-      },
-      quote: {
-        type: String,
-        trim: true,
-      },
+    featuredBook: {
+      type: String,
+      trim: true,
     },
   },
   { timestamps: true }

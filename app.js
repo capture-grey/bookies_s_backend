@@ -39,8 +39,7 @@ app.use(cookieParser(process.env.COOKIE_SECRET));
 app.use("/api/auth", authRouter);
 app.use("/api/user", userRouter);
 app.use("/api/book", bookRouter);
-//app.use("api/forum", forumRouter);
-// app.use("/forums", inboxRouter);
+app.use("/api/forum", forumRouter);
 
 // 404 not found handler
 app.use(notFoundHandler);

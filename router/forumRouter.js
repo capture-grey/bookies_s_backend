@@ -1,33 +1,37 @@
 const express = require("express");
 const {
   createForum,
-  getForumdDetails,
+  getForumDetails,
   editDetails,
+  leaveForum,
   deleteForum,
-  changeInviteCode,
+  getMemberDetails,
+  makeAdmin,
   removeUser,
-  bookList,
   hideBook,
   unhideBook,
 } = require("../controllers/forumController.js");
+
+const { authenticate } = require("../middlewares/common/authMiddleware.js");
 
 const router = express.Router();
 
 //---> path: /api/forum
 
 //forum action
-router.post("/", createForum);
-router.get("/:forumID", getForumdDetails);
-router.patch("/:forumID", editDetails);
-router.delete("/:forumID", deleteForum);
-router.patch("/:forumID/invite", changeInviteCode);
+router.post("/", authenticate, createForum);
+router.get("/:forumId", authenticate, getForumDetails);
+router.patch("/:forumId", authenticate, editDetails);
+router.delete("/:forumId/leave", authenticate, leaveForum);
+router.delete("/:forumId", authenticate, deleteForum);
 
 //user action
-router.delete("/:forumID/users/:userID", removeUser);
+router.get("/:forumID/users/:userID", authenticate, getMemberDetails);
+router.patch("/:forumID/users/:userID", authenticate, makeAdmin);
+router.delete("/:forumID/users/:userID", authenticate, removeUser);
 
 //book action
-router.get("/:forumID/books", bookList);
-router.patch("/:forumID/books/:bookID/hide", hideBook);
-router.patch("/:forumID/books/:bookID/unhide", unhideBook);
+router.patch("/:forumID/books/:bookID/hide", authenticate, hideBook);
+router.patch("/:forumID/books/:bookID/unhide", authenticate, unhideBook);
 
 module.exports = router;
