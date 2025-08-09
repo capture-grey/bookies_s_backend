@@ -16,7 +16,7 @@ module.exports = {
           message: "Please authenticate(no token)",
         });
       }
-      console.log(token);
+
       // token verification
       let decoded;
       try {

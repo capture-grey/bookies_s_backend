@@ -10,7 +10,7 @@ const router = express.Router();
 
 //---> path: /api/book
 router.post("/add", authenticate, addBook);
-router.delete("/:bookId", deleteBook);
-router.patch("/:bookId", editBook);
+router.delete("/:bookId", authenticate, deleteBook);
+router.patch("/:bookId", authenticate, editBook);
 
 module.exports = router;
