@@ -29,7 +29,7 @@ router.delete("/:forumId", authenticate, deleteForum);
 
 //user action
 router.get("/:forumId/users/:memberId", authenticate, getMemberDetails);
-router.patch("/:forumId/users/:userId", authenticate, makeAdmin);
+router.patch("/:forumId/users/:memberId", authenticate, makeAdmin);
 router.delete("/:forumId/users/:memberId", authenticate, removeUser);
 
 //book action

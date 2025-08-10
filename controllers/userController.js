@@ -82,14 +82,12 @@ const editOwnInfo = async (req, res, next) => {
     const userId = req.user._id;
     const { name, email, currentPassword, newPassword } = req.body;
 
-    console.log(userId, name, email, currentPassword, newPassword);
-
+    // any field provided
     if (!name && !email && !newPassword) {
       await session.abortTransaction();
       return res.status(400).json({
         success: false,
-        message:
-          "At least one field (name, email, or password) must be provided",
+        message: "At least one field must be provided",
       });
     }
 
@@ -111,7 +109,7 @@ const editOwnInfo = async (req, res, next) => {
         await session.abortTransaction();
         return res.status(400).json({
           success: false,
-          message: "Name must be a non-empty string",
+          message: "Invalid name format",
         });
       }
       user.name = name.trim();
@@ -119,29 +117,28 @@ const editOwnInfo = async (req, res, next) => {
 
     // update email
     if (email) {
-      if (typeof email !== "string" || !email.trim()) {
+      const trimmedEmail = email.trim().toLowerCase();
+      if (!trimmedEmail) {
         await session.abortTransaction();
         return res.status(400).json({
           success: false,
-          message: "Email must be a non-empty string",
+          message: "Invalid email format",
         });
       }
 
-      //  if email already exists
       const emailExists = await User.findOne({
-        email: email.trim(),
+        email: trimmedEmail,
         _id: { $ne: userId },
       }).session(session);
 
       if (emailExists) {
         await session.abortTransaction();
-        return res.status(400).json({
+        return res.status(409).json({
           success: false,
           message: "Email already in use",
         });
       }
-
-      user.email = email.trim().toLowerCase();
+      user.email = trimmedEmail;
     }
 
     // update password
@@ -150,11 +147,11 @@ const editOwnInfo = async (req, res, next) => {
         await session.abortTransaction();
         return res.status(400).json({
           success: false,
-          message: "Current password is required to set a new password",
+          message: "Current password is required",
         });
       }
 
-      // verify current password
+      // check current password
       const isMatch = await user.comparePassword(currentPassword);
       if (!isMatch) {
         await session.abortTransaction();
@@ -164,19 +161,17 @@ const editOwnInfo = async (req, res, next) => {
         });
       }
 
-      // validate new password
       if (newPassword.length < 6) {
         await session.abortTransaction();
         return res.status(400).json({
           success: false,
-          message: "Password must be at least 6 characters long",
+          message: "Password must be at least 6 characters",
         });
       }
 
       user.password = newPassword;
     }
 
-    // save changes
     await user.save({ session });
     await session.commitTransaction();
 
@@ -205,6 +200,45 @@ const editOwnInfo = async (req, res, next) => {
     next(error);
   } finally {
     await session.endSession();
+  }
+};
+const getOwnBooks = async (req, res, next) => {
+  try {
+    const user = await User.findById(req.user._id)
+      .select("ownedBooks")
+      .populate({
+        path: "ownedBooks",
+        select: "title author genre",
+        options: { sort: { title: 1 } },
+      });
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+
+    const books = user.ownedBooks
+      .filter((book) => book !== null)
+      .map((book) => ({
+        id: book._id,
+        title: book.title,
+        author: book.author,
+        genre: book.genre,
+      }));
+
+    return res.status(200).json({
+      success: true,
+      count: books.length,
+      books,
+    });
+  } catch (error) {
+    console.error("Get user books error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error",
+    });
   }
 };
 const deleteAccount = async (req, res, next) => {
@@ -300,6 +334,7 @@ const deleteAccount = async (req, res, next) => {
 
 module.exports = {
   getOwnInfo,
+  getOwnBooks,
   deleteAccount,
   editOwnInfo,
 };
