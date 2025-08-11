@@ -15,8 +15,12 @@ const signUp = async (req, res, next) => {
 
     const { name, email, password } = req.body;
 
-    //check if any field missing
-    if (!name || !email || !password) {
+    // Trim and validate inputs
+    const trimmedEmail = email.trim().toLowerCase();
+    const trimmedName = name.trim();
+    const trimmedPassword = password.trim();
+
+    if (!trimmedName || !trimmedEmail || !trimmedPassword) {
       await session.abortTransaction();
       session.endSession();
       return res.status(400).json({
@@ -25,28 +29,32 @@ const signUp = async (req, res, next) => {
       });
     }
 
-    // check user already exist
-    const userExist = await User.findOne({ email }).session(session);
+    // Check user already exists
+    const userExist = await User.findOne({ email: trimmedEmail }).session(
+      session
+    );
     if (userExist) {
       await session.abortTransaction();
       session.endSession();
       return res.status(400).json({
         success: false,
-        message: "email already registered",
+        message: "Email already registered",
       });
     }
 
-    // hash password
-    const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash(password, salt);
-
-    // create user
+    // Create user - let the pre-save middleware handle hashing
     const newUser = await User.create(
-      [{ name, email, password: hashedPassword }],
+      [
+        {
+          name: trimmedName,
+          email: trimmedEmail,
+          password: trimmedPassword, // This will be hashed by the pre-save hook
+        },
+      ],
       { session }
     );
 
-    // jwt token
+    // JWT token
     const token = JWT.sign({ userId: newUser[0]._id }, process.env.JWT_SECRET, {
       expiresIn: process.env.JWT_EXPIRES_IN,
     });
@@ -54,7 +62,7 @@ const signUp = async (req, res, next) => {
     await session.commitTransaction();
     session.endSession();
 
-    //create and send response with token
+    // Return response without password
     const userResponse = newUser[0].toObject();
     delete userResponse.password;
     res.status(201).json({
@@ -68,7 +76,7 @@ const signUp = async (req, res, next) => {
   } catch (error) {
     await session.abortTransaction();
     session.endSession();
-    console.log("error from sign-up");
+    console.error("Error from sign-up:", error);
     next(error);
   }
 };
@@ -76,50 +84,64 @@ const signIn = async (req, res, next) => {
   try {
     const { email, password } = req.body;
 
-    //console.log("-------------------------here at sign-in line 79");
+    // Trim and validate inputs
+    const trimmedEmail = email.trim().toLowerCase();
+    const trimmedPassword = password.trim();
 
-    // check if any field empty
-    if (!email || !password) {
+    if (!trimmedEmail || !trimmedPassword) {
       return res.status(401).json({
         success: false,
-        message: "both email and password required",
+        message: "Both email and password required",
       });
     }
 
-    //console.log("-------------------------here at sign-in line 89");
-
-    // check if user exists then password matches
-    const user = await User.findOne({ email }).select("+password");
-    if (!user || !(await bcrypt.compare(password, user.password))) {
+    // Find user with password selected
+    const user = await User.findOne({ email: trimmedEmail }).select(
+      "+password"
+    );
+    if (!user) {
+      console.log(`No user found for email: ${trimmedEmail}`);
       return res.status(401).json({
         success: false,
-        message: "invalid credentials",
+        message: "Invalid credentials",
       });
     }
 
-    //console.log("-------------------------here at sign-in line 98");
+    // Debug logging
+    console.log(`Login attempt for: ${trimmedEmail}`);
+    console.log(`Provided password: ${trimmedPassword}`);
+    console.log(`Stored hash: ${user.password}`);
 
-    //generate token
+    // Compare passwords
+    const isMatch = await bcrypt.compare(trimmedPassword, user.password);
+    console.log(`Password comparison result: ${isMatch}`);
+
+    if (!isMatch) {
+      return res.status(401).json({
+        success: false,
+        message: "Invalid credentials",
+      });
+    }
+
+    // Generate token
     const token = JWT.sign({ userId: user._id }, process.env.JWT_SECRET, {
       expiresIn: process.env.JWT_EXPIRES_IN,
     });
 
-    //response
-    return res.status(201).json({
+    // Return response without password
+    const userResponse = user.toObject();
+    delete userResponse.password;
+
+    return res.status(200).json({
       success: true,
-      message: "logged in successfully",
+      message: "Logged in successfully",
       data: {
-        user: {
-          _id: user._id,
-          name: user.name,
-          email: user.email,
-        },
+        user: userResponse,
         token,
       },
     });
-
-    //
   } catch (error) {
+    console.error("Login error:", error);
     next(error);
   }
 };
