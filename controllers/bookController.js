@@ -138,7 +138,7 @@ const editBook = async (req, res, next) => {
   const session = await mongoose.startSession();
 
   try {
-    const { newTitle, newAuthor, newGenre = "" } = req.body; // single genre string
+    const { title, author, genre } = req.body; // All fields optional except at least one must be provided
     const currentBookId = req.params.bookId;
 
     if (!currentBookId || !mongoose.Types.ObjectId.isValid(currentBookId)) {
@@ -148,17 +148,12 @@ const editBook = async (req, res, next) => {
       });
     }
 
-    if (!newTitle || typeof newTitle !== "string") {
+    // Check at least one field is being updated
+    if (!title && !author && genre === undefined) {
       return res.status(400).json({
         success: false,
-        message: "New title is required and must be a string",
-      });
-    }
-
-    if (!newAuthor || typeof newAuthor !== "string") {
-      return res.status(400).json({
-        success: false,
-        message: "New author is required and must be a string",
+        message:
+          "At least one field (title, author, or genre) must be provided for update",
       });
     }
 
@@ -184,67 +179,92 @@ const editBook = async (req, res, next) => {
       });
     }
 
-    const normalizedTitle = newTitle.trim();
-    const normalizedAuthor = newAuthor.trim();
-    const normalizedGenre = newGenre.trim();
+    // Prepare update fields
+    const updateFields = {};
+    if (title !== undefined) updateFields.title = title.trim();
+    if (author !== undefined) updateFields.author = author.trim();
+    if (genre !== undefined) updateFields.genre = genre.trim();
 
-    // Find if another book with same title+author exists (excluding current book)
-    const existingBook = await Book.findOne({
-      _id: { $ne: currentBookId },
-      title: { $regex: new RegExp(`^${escapeRegex(normalizedTitle)}$`, "i") },
-      author: { $regex: new RegExp(`^${escapeRegex(normalizedAuthor)}$`, "i") },
-    }).session(session);
+    // Only check for duplicates if title or author are being updated
+    if (title || author) {
+      const normalizedTitle = title ? title.trim() : undefined;
+      const normalizedAuthor = author ? author.trim() : undefined;
 
-    let finalBookId = currentBookId;
-
-    if (existingBook) {
-      // If existing book has no genre but newGenre provided, update it
-      if (
-        normalizedGenre &&
-        (!existingBook.genre || existingBook.genre.trim() === "")
-      ) {
-        existingBook.genre = normalizedGenre;
-        await existingBook.save({ session });
-      }
-
-      // Replace book ref in user's ownedBooks
-      user.ownedBooks = user.ownedBooks.map((id) =>
-        id.equals(currentBookId) ? existingBook._id : id
-      );
-
-      // Deduplicate ownedBooks just in case
-      user.ownedBooks = [
-        ...new Set(user.ownedBooks.map((id) => id.toString())),
-      ].map((id) => new mongoose.Types.ObjectId(id));
-
-      finalBookId = existingBook._id;
-
-      // Check if currentBook is owned by others; if none, delete it
-      const otherOwnersCount = await User.countDocuments({
-        ownedBooks: currentBookId,
-        _id: { $ne: userId },
+      // Find if another book with same title+author exists (excluding current book)
+      const existingBook = await Book.findOne({
+        _id: { $ne: currentBookId },
+        ...(normalizedTitle && {
+          title: {
+            $regex: new RegExp(`^${escapeRegex(normalizedTitle)}$`, "i"),
+          },
+        }),
+        ...(normalizedAuthor && {
+          author: {
+            $regex: new RegExp(`^${escapeRegex(normalizedAuthor)}$`, "i"),
+          },
+        }),
       }).session(session);
 
-      if (otherOwnersCount === 0) {
-        await Book.deleteOne({ _id: currentBookId }).session(session);
-      }
-    } else {
-      // Update the current book document directly
-      const currentBook = await Book.findById(currentBookId).session(session);
-      if (!currentBook) {
-        await session.abortTransaction();
+      let finalBookId = currentBookId;
+
+      if (existingBook) {
+        // If existing book has no genre but new genre provided, update it
+        if (
+          updateFields.genre &&
+          (!existingBook.genre || existingBook.genre.trim() === "")
+        ) {
+          existingBook.genre = updateFields.genre;
+          await existingBook.save({ session });
+        }
+
+        // Replace book ref in user's ownedBooks
+        user.ownedBooks = user.ownedBooks.map((id) =>
+          id.equals(currentBookId) ? existingBook._id : id
+        );
+
+        // Deduplicate ownedBooks
+        user.ownedBooks = [
+          ...new Set(user.ownedBooks.map((id) => id.toString())),
+        ].map((id) => new mongoose.Types.ObjectId(id));
+
+        finalBookId = existingBook._id;
+
+        // Check if currentBook is owned by others; if none, delete it
+        const otherOwnersCount = await User.countDocuments({
+          ownedBooks: currentBookId,
+          _id: { $ne: userId },
+        }).session(session);
+
+        if (otherOwnersCount === 0) {
+          await Book.deleteOne({ _id: currentBookId }).session(session);
+        }
+
+        await user.save({ session });
+        await session.commitTransaction();
         session.endSession();
-        return res.status(404).json({
-          success: false,
-          message: "Book not found",
+
+        return res.status(200).json({
+          success: true,
+          message: "Book merged successfully",
+          data: { bookId: finalBookId },
         });
       }
+    }
 
-      currentBook.title = normalizedTitle;
-      currentBook.author = normalizedAuthor;
-      currentBook.genre = normalizedGenre;
+    // If no duplicate found or only genre is being updated, update current book
+    const currentBook = await Book.findByIdAndUpdate(
+      currentBookId,
+      updateFields,
+      { new: true, session }
+    );
 
-      await currentBook.save({ session });
+    if (!currentBook) {
+      await session.abortTransaction();
+      session.endSession();
+      return res.status(404).json({
+        success: false,
+        message: "Book not found",
+      });
     }
 
     await user.save({ session });
@@ -254,7 +274,7 @@ const editBook = async (req, res, next) => {
     return res.status(200).json({
       success: true,
       message: "Book updated successfully",
-      data: { bookId: finalBookId },
+      data: { bookId: currentBookId },
     });
   } catch (error) {
     if (session.inTransaction()) await session.abortTransaction();

@@ -100,22 +100,14 @@ const signIn = async (req, res, next) => {
       "+password"
     );
     if (!user) {
-      console.log(`No user found for email: ${trimmedEmail}`);
       return res.status(401).json({
         success: false,
         message: "Invalid credentials",
       });
     }
 
-    // Debug logging
-    console.log(`Login attempt for: ${trimmedEmail}`);
-    console.log(`Provided password: ${trimmedPassword}`);
-    console.log(`Stored hash: ${user.password}`);
-
     // Compare passwords
-    const isMatch = await bcrypt.compare(trimmedPassword, user.password);
-    console.log(`Password comparison result: ${isMatch}`);
-
+    const isMatch = await user.comparePassword(trimmedPassword); // Using the model method
     if (!isMatch) {
       return res.status(401).json({
         success: false,
@@ -123,21 +115,17 @@ const signIn = async (req, res, next) => {
       });
     }
 
-    // Generate token
+    // Generate token only
     const token = JWT.sign({ userId: user._id }, process.env.JWT_SECRET, {
       expiresIn: process.env.JWT_EXPIRES_IN,
     });
 
-    // Return response without password
-    const userResponse = user.toObject();
-    delete userResponse.password;
-
+    // Return only token in response
     return res.status(200).json({
       success: true,
       message: "Logged in successfully",
       data: {
-        user: userResponse,
-        token,
+        token, // Only returning token
       },
     });
   } catch (error) {
@@ -145,7 +133,6 @@ const signIn = async (req, res, next) => {
     next(error);
   }
 };
-
 module.exports = {
   signIn,
   signUp,

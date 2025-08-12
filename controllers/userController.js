@@ -175,9 +175,10 @@ const editOwnInfo = async (req, res, next) => {
     await user.save({ session });
     await session.commitTransaction();
 
+    // Include email in the response
     const responseData = {
       name: user.name,
-      email: user.email,
+      email: user.email, // This will include the email whether it was updated or not
     };
 
     return res.status(200).json({

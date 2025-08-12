@@ -151,7 +151,7 @@ const getForumDetails = async (req, res, next) => {
       })
       .session(session);
 
-    //  combine books
+    // combine books
     const uniqueBooks = [];
     const bookIds = new Set();
 
@@ -181,7 +181,7 @@ const getForumDetails = async (req, res, next) => {
           createdAt: forum.createdAt,
           membersCount: forum.members.length,
           booksCount: uniqueBooks.length,
-          featuredBook: forum.featuredBook,
+          featured: forum.featured || null, // Add featured field here
         },
         members: forum.members.map((member) => ({
           _id: member.userId._id,
@@ -193,7 +193,7 @@ const getForumDetails = async (req, res, next) => {
       },
     };
 
-    //  admin only
+    // admin only
     if (isAdmin) {
       const hiddenBooks = await Book.find(
         { _id: { $in: forum.hiddenBooks || [] } },
