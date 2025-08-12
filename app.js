@@ -41,14 +41,18 @@ app.use("/api/user", userRouter);
 app.use("/api/book", bookRouter);
 app.use("/api/forum", forumRouter);
 
+app.get("/", (req, res) => {
+  res.status(200).json({ message: "Hello From Bookies!" });
+});
+
 // 404 not found handler
 app.use(notFoundHandler);
 
 // common error handler
 app.use(errorHandler);
 
-app.listen(process.env.PORT, () => {
-  console.log(`app listening to port ${process.env.PORT}`);
-});
+// app.listen(process.env.PORT, () => {
+//   console.log(`app listening to port ${process.env.PORT}`);
+// });
 
-//module.exports = app;
+module.exports = app;
