@@ -1,0 +1,651 @@
+{
+	"info": {
+		"_postman_id": "a327dcaa-0aad-421d-a036-f9ffbb21f6e0",
+		"name": "bookies_simplified_backend",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "27525903"
+	},
+	"item": [
+		{
+			"name": "Auth",
+			"item": [
+				{
+					"name": "sign-up",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Emon\",\n  \"email\": \"emon@yopmail.com\",\n  \"password\": \"emon12345\"\n}\n",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{BASE_URL}}/auth/sign-up",
+							"host": [
+								"{{BASE_URL}}"
+							],
+							"path": [
+								"auth",
+								"sign-up"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "sign-in",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"emon@yopmail.com\",\n  \"password\": \"emon12345\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "https://bookies-three.vercel.app/api/auth/sign-in",
+							"protocol": "https",
+							"host": [
+								"bookies-three",
+								"vercel",
+								"app"
+							],
+							"path": [
+								"api",
+								"auth",
+								"sign-in"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Personal - Account",
+			"item": [
+				{
+					"name": "personal - get details",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:5000/api/user/me",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "5000",
+							"path": [
+								"api",
+								"user",
+								"me"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "personal - edit details",
+					"request": {
+						"method": "PATCH",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Updated Name\",\n  \"email\": \"updated.email@example.com\",\n  \"currentPassword\": \"newPassword456\",\n  \"newPassword\": \"demo12345\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://localhost:5000/api/user/me",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "5000",
+							"path": [
+								"api",
+								"user",
+								"me"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "personal - delete account",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2ODk3NmEyNjFkYjdhZjcyMDU2ODVjZDciLCJpYXQiOjE3NTQ3NTM1NzQsImV4cCI6MTc4NTg1NzU3NH0.mmau-V5Ol6m600lzjE-DoOB06IvIlcv48aj3yoMF2ao",
+									"type": "string"
+								}
+							]
+						},
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:5000/api/user/me",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "5000",
+							"path": [
+								"api",
+								"user",
+								"me"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Personal - Manage Books",
+			"item": [
+				{
+					"name": "personal - get own books",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2ODk2MzcxZjQ1OThlOTE5YTQ1ZTIxODgiLCJpYXQiOjE3NTQ2NzkxMzYsImV4cCI6MTc4NTc4MzEzNn0.8MnAJNxlGqlamGPSzuXFQAOtfiMNtjTRdle_qDClyF8",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:5000/api/user/me/books",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "5000",
+							"path": [
+								"api",
+								"user",
+								"me",
+								"books"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "personal list - add book",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2ODk2MzcxZjQ1OThlOTE5YTQ1ZTIxODgiLCJpYXQiOjE3NTQ2NzkxMzYsImV4cCI6MTc4NTc4MzEzNn0.8MnAJNxlGqlamGPSzuXFQAOtfiMNtjTRdle_qDClyF8",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"title\" : \"book3\",\n    \"author\" : \"author3\",\n    \"genre\" : \"genre3\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://localhost:5000/api/book/add",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "5000",
+							"path": [
+								"api",
+								"book",
+								"add"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "personal list - edit book",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2ODk2MzcxZjQ1OThlOTE5YTQ1ZTIxODgiLCJpYXQiOjE3NTQ2NzkxMzYsImV4cCI6MTc4NTc4MzEzNn0.8MnAJNxlGqlamGPSzuXFQAOtfiMNtjTRdle_qDClyF8",
+									"type": "string"
+								}
+							]
+						},
+						"method": "PATCH",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"title\" : \"book1\",\n    \"author\" : \"author1\",\n    \"genre\" : \"genre2\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://localhost:5000/api/book/6896650eab8565ce8a934ca0",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "5000",
+							"path": [
+								"api",
+								"book",
+								"6896650eab8565ce8a934ca0"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "personal list - delete book",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2ODk2MzcxZjQ1OThlOTE5YTQ1ZTIxODgiLCJpYXQiOjE3NTQ2NzkxMzYsImV4cCI6MTc4NTc4MzEzNn0.8MnAJNxlGqlamGPSzuXFQAOtfiMNtjTRdle_qDClyF8",
+									"type": "string"
+								}
+							]
+						},
+						"method": "DELETE",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "",
+							"options": {
+								"raw": {
+									"language": "text"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://localhost:5000/api/book/6896650eab8565ce8a934ca0",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "5000",
+							"path": [
+								"api",
+								"book",
+								"6896650eab8565ce8a934ca0"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Forum",
+			"item": [
+				{
+					"name": "Common Actions",
+					"item": [
+						{
+							"name": "forum - create forum",
+							"request": {
+								"method": "POST",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"name\": \"Book Lovers Hub\",\n  \"location\": \"Dhaka, Bangladesh\",\n  \"description\": \"A friendly place for bookworms to share recommendations, reviews, and reading tips.\"\n}\n",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "http://localhost:5000/api/forum/",
+									"protocol": "http",
+									"host": [
+										"localhost"
+									],
+									"port": "5000",
+									"path": [
+										"api",
+										"forum",
+										""
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "forum - join forum",
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2ODk3NGNiYzJiNWQ3NDlmOTAyNTRjMTYiLCJpYXQiOjE3NTQ3NDYwNDQsImV4cCI6MTc4NTg1MDA0NH0.J5tGydW8dYRNvsW_Q4_Y3OO6531KX2XScdD0Dz7vWnU",
+											"type": "string"
+										}
+									]
+								},
+								"method": "POST",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"inviteCode\": \"068bb311-fa5a-4642-a818-bc56981f56be\"\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "http://localhost:5000/api/forum/join",
+									"protocol": "http",
+									"host": [
+										"localhost"
+									],
+									"port": "5000",
+									"path": [
+										"api",
+										"forum",
+										"join"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "forum - get details",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "http://localhost:5000/api/forum/6896a96bfa2982ebde5f6c0d",
+									"protocol": "http",
+									"host": [
+										"localhost"
+									],
+									"port": "5000",
+									"path": [
+										"api",
+										"forum",
+										"6896a96bfa2982ebde5f6c0d"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "forum - get a member's details",
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2ODk2MzcxZjQ1OThlOTE5YTQ1ZTIxODgiLCJpYXQiOjE3NTQ3NDc4NjIsImV4cCI6MTc4NTg1MTg2Mn0.fcneJTtMTfcVJz1R5mzFRwle0mkcF5g35uOQ4ytHlIw",
+											"type": "string"
+										}
+									]
+								},
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "http://localhost:5000/api/forum/6896a96bfa2982ebde5f6c0d/users/68974cbc2b5d749f90254c16",
+									"protocol": "http",
+									"host": [
+										"localhost"
+									],
+									"port": "5000",
+									"path": [
+										"api",
+										"forum",
+										"6896a96bfa2982ebde5f6c0d",
+										"users",
+										"68974cbc2b5d749f90254c16"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "forum - leave forum",
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2ODk3NGNiYzJiNWQ3NDlmOTAyNTRjMTYiLCJpYXQiOjE3NTQ3NDYwNDQsImV4cCI6MTc4NTg1MDA0NH0.J5tGydW8dYRNvsW_Q4_Y3OO6531KX2XScdD0Dz7vWnU",
+											"type": "string"
+										}
+									]
+								},
+								"method": "DELETE",
+								"header": [],
+								"url": {
+									"raw": "http://localhost:5000/api/forum/6896a96bfa2982ebde5f6c0d/leave",
+									"protocol": "http",
+									"host": [
+										"localhost"
+									],
+									"port": "5000",
+									"path": [
+										"api",
+										"forum",
+										"6896a96bfa2982ebde5f6c0d",
+										"leave"
+									]
+								}
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "Admin Only",
+					"item": [
+						{
+							"name": "forum - edit details",
+							"request": {
+								"method": "PATCH",
+								"header": [],
+								"url": {
+									"raw": ""
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "forum - make a member admin",
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2ODk2MzcxZjQ1OThlOTE5YTQ1ZTIxODgiLCJpYXQiOjE3NTQ3NDc4NjIsImV4cCI6MTc4NTg1MTg2Mn0.fcneJTtMTfcVJz1R5mzFRwle0mkcF5g35uOQ4ytHlIw",
+											"type": "string"
+										}
+									]
+								},
+								"method": "PATCH",
+								"header": [],
+								"url": {
+									"raw": "http://localhost:5000/api/forum/6896a96bfa2982ebde5f6c0d/users/68974cbc2b5d749f90254c16",
+									"protocol": "http",
+									"host": [
+										"localhost"
+									],
+									"port": "5000",
+									"path": [
+										"api",
+										"forum",
+										"6896a96bfa2982ebde5f6c0d",
+										"users",
+										"68974cbc2b5d749f90254c16"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "forum - remove a member",
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2ODk2MzcxZjQ1OThlOTE5YTQ1ZTIxODgiLCJpYXQiOjE3NTQ3NDc4NjIsImV4cCI6MTc4NTg1MTg2Mn0.fcneJTtMTfcVJz1R5mzFRwle0mkcF5g35uOQ4ytHlIw",
+											"type": "string"
+										}
+									]
+								},
+								"method": "DELETE",
+								"header": [],
+								"url": {
+									"raw": "http://localhost:5000/api/forum/6896a96bfa2982ebde5f6c0d/users/68974cbc2b5d749f90254c16",
+									"protocol": "http",
+									"host": [
+										"localhost"
+									],
+									"port": "5000",
+									"path": [
+										"api",
+										"forum",
+										"6896a96bfa2982ebde5f6c0d",
+										"users",
+										"68974cbc2b5d749f90254c16"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "forum - delete forum",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": ""
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "forum - hidebook",
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2ODk2MzcxZjQ1OThlOTE5YTQ1ZTIxODgiLCJpYXQiOjE3NTQ3NDc4NjIsImV4cCI6MTc4NTg1MTg2Mn0.fcneJTtMTfcVJz1R5mzFRwle0mkcF5g35uOQ4ytHlIw",
+											"type": "string"
+										}
+									]
+								},
+								"method": "PATCH",
+								"header": [],
+								"url": {
+									"raw": "http://localhost:5000/api/forum/6896a96bfa2982ebde5f6c0d/books/68974cf32b5d749f90254c1b/hide",
+									"protocol": "http",
+									"host": [
+										"localhost"
+									],
+									"port": "5000",
+									"path": [
+										"api",
+										"forum",
+										"6896a96bfa2982ebde5f6c0d",
+										"books",
+										"68974cf32b5d749f90254c1b",
+										"hide"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "forum - unhidebook",
+							"request": {
+								"method": "PATCH",
+								"header": [],
+								"url": {
+									"raw": "http://localhost:5000/api/forum/6896a96bfa2982ebde5f6c0d/books/68974cf32b5d749f90254c1b/unhide",
+									"protocol": "http",
+									"host": [
+										"localhost"
+									],
+									"port": "5000",
+									"path": [
+										"api",
+										"forum",
+										"6896a96bfa2982ebde5f6c0d",
+										"books",
+										"68974cf32b5d749f90254c1b",
+										"unhide"
+									]
+								}
+							},
+							"response": []
+						}
+					]
+				}
+			]
+		}
+	],
+	"auth": {
+		"type": "bearer",
+		"bearer": [
+			{
+				"key": "token",
+				"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2ODk5M2YwZmYxZDk1NWQ4ZjgzOWVkNmYiLCJpYXQiOjE3NTQ4NzM2MTYsImV4cCI6MTc4NTk3NzYxNn0.prv_InUO99dJFNCtAXVLZfz-ffZgckNGHwqmDFANb60",
+				"type": "string"
+			}
+		]
+	},
+	"variable": [
+		{
+			"key": "BASE_URL",
+			"value": "https://bookies-three.vercel.app/api",
+			"type": "string"
+		}
+	]
+}
