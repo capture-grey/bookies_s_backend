@@ -4,6 +4,7 @@ const dotenv = require("dotenv");
 const mongoose = require("mongoose");
 const path = require("path");
 const cookieParser = require("cookie-parser");
+const cors = require("cors");
 
 //internal imports
 const {
@@ -50,6 +51,13 @@ app.use(notFoundHandler);
 
 // common error handler
 app.use(errorHandler);
+
+app.use(
+  cors({
+    origin: ["http://localhost:5173", "https://yourfrontend.vercel.app"],
+    credentials: true,
+  })
+);
 
 // app.listen(process.env.PORT, () => {
 //   console.log(`app listening to port ${process.env.PORT}`);
