@@ -6,7 +6,7 @@ const path = require("path");
 const cookieParser = require("cookie-parser");
 const cors = require("cors");
 
-//internal imports
+// internal imports
 const {
   notFoundHandler,
   errorHandler,
@@ -25,6 +25,13 @@ mongoose
   .connect(process.env.MONGO_CONNECTION_STRING)
   .then(() => console.log("database connection successful!"))
   .catch((err) => console.log(err));
+
+app.use(
+  cors({
+    origin: ["http://localhost:5173", "https://yourfrontend.vercel.app"],
+    credentials: true, // needed if you're using cookies / auth tokens
+  })
+);
 
 // request parsers
 app.use(express.json());
@@ -52,12 +59,7 @@ app.use(notFoundHandler);
 // common error handler
 app.use(errorHandler);
 
-app.use(
-  cors({
-    origin: ["http://localhost:5173", "https://yourfrontend.vercel.app"],
-  })
-);
-
+// For local dev only
 // app.listen(process.env.PORT, () => {
 //   console.log(`app listening to port ${process.env.PORT}`);
 // });
