@@ -29,7 +29,6 @@ mongoose
 app.use(
   cors({
     origin: ["http://localhost:5173", "https://yourfrontend.vercel.app"],
-    credentials: true, // needed if you're using cookies / auth tokens
   })
 );
 
@@ -59,9 +58,8 @@ app.use(notFoundHandler);
 // common error handler
 app.use(errorHandler);
 
-// For local dev only
-// app.listen(process.env.PORT, () => {
-//   console.log(`app listening to port ${process.env.PORT}`);
-// });
+app.listen(process.env.PORT, () => {
+  console.log(`app listening to port ${process.env.PORT}`);
+});
 
 module.exports = app;
