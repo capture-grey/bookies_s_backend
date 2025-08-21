@@ -30,7 +30,8 @@ app.use(
   cors({
     origin: [
       "http://localhost:5173",
-      "https://simplified-nb.vercel.app, https://simplified-nb-rorshachs-projects-9fee91c2.vercel.app",
+      "https://simplified-nb.vercel.app",
+      "https://simplified-nb-rorshachs-projects-9fee91c2.vercel.app",
     ],
   })
 );
